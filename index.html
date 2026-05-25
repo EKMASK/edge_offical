@@ -158,7 +158,7 @@ nav{
 
 /* COLLECTION */
 .col-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--ink-faint);}
-.col-item{background:var(--bg);aspect-ratio:3/4;position:relative;overflow:hidden;cursor:none;}
+.col-item{display:block;background:var(--bg);aspect-ratio:3/4;position:relative;overflow:hidden;cursor:none;text-decoration:none;color:inherit;}
 .col-item:nth-child(2){transform:translateY(2.5rem);}
 .col-item:nth-child(3){transform:translateY(-2.5rem);}
 .col-canvas{position:absolute;inset:0;width:100%;height:100%;}
@@ -330,11 +330,11 @@ footer{max-width:1100px;margin:0 auto;padding:3.5rem 3rem 5rem;display:flex;just
       <span class="sh-idx">SS26 — NODE SERIES</span>
     </div>
     <div class="col-grid">
-      <div class="col-item rv rv-d1">
+      <a class="col-item rv rv-d1" href="projekt00.html" aria-label="Open Projekt00 collection">
         <canvas class="col-canvas" data-rings="3" data-nodes="4" data-offset="0"></canvas>
         <div class="col-line"></div>
         <div class="col-info"><div class="col-node">00</div><div class="col-name">PROJEKT00</div></div>
-      </div>
+      </a>
       <!--div class="col-item rv rv-d2">
         <canvas class="col-canvas" data-rings="4" data-nodes="5" data-offset="1"></canvas>
         <div class="col-line"></div>
