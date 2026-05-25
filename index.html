@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EDGE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400&family=Cormorant+Garamond:ital,wght@0,300;1,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #ebebeb;
+  --ink: #1a1614;
+  --ink-faint: rgba(26,22,20,0.15);
+  --ink-mid: rgba(26,22,20,0.42);
+  --accent: #8c6a5a;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:'DM Mono',monospace;
+  overflow-x:hidden;
+  cursor:none;
+}
+
+/* horizontal line texture */
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:repeating-linear-gradient(
+    to bottom,transparent 0px,transparent 3px,
+    rgba(26,22,20,0.052) 3px,rgba(26,22,20,0.052) 4px
+  );
+  pointer-events:none;z-index:1;
+}
+
+/* CURSOR */
+#cur{
+  position:fixed;
+  width:7px;
+  height:7px;
+  border:1.5px solid #fff;
+  border-radius:50%;
+  pointer-events:none;
+  z-index:9999;
+  transform:translate(-50%,-50%);
+  mix-blend-mode: difference;
+}
+
+#cur-ring{
+  position:fixed;
+  width:26px;
+  height:26px;
+  border:1.3px solid #adadad;
+  border-radius:50%;
+  pointer-events:none;
+  z-index:9998;
+  transform:translate(-50%,-50%);
+  mix-blend-mode: difference;
+}
+
+/* LOADER */
+#loader{
+  position:fixed;inset:0;background:var(--bg);z-index:9990;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.4rem;
+  transition:opacity .8s ease,visibility .8s ease;
+}
+#loader.out{opacity:0;visibility:hidden;}
+.ld-wrap{position:relative;width:160px;height:160px;}
+.ld-wrap canvas{width:160px;height:160px;}
+.ld-lbl{font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.4em;color:var(--ink-mid);animation:blink 1.1s step-end infinite;}
+@keyframes blink{50%{opacity:0}}
+
+/* NAV — 5 equal columns */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  display:grid;grid-template-columns:repeat(5,1fr);
+  height:2.6rem;
+  border-bottom:1px solid var(--ink-faint);
+  background:var(--bg);
+}
+.nav-cell{
+  display:flex;align-items:center;justify-content:center;
+  height:100%;border-right:1px solid var(--ink);
+}
+.nav-cell:last-child{border-right:none;}
+.nav-cell a{
+  font-family:'DM Mono',monospace;font-size:.7rem;font-weight:700;
+  letter-spacing:.3em;color:rgba(26,22,20,0.72);text-decoration:none;transition:color .2s;
+}
+.nav-cell a:hover{color:var(--ink);}
+.nav-brand a{
+  font-family:'Times New Roman',Times,serif;
+  font-size:1.3rem;letter-spacing:.1em;
+  color:var(--ink);font-weight:400;
+}
+
+/* TICKER */
+.ticker-wrap{
+  position:fixed;bottom:0;left:0;right:0;z-index:200;
+  height:1.7rem;overflow:hidden;
+  border-top:1px solid var(--ink);
+  display:flex;align-items:center;background:var(--bg);
+}
+.ticker{display:flex;white-space:nowrap;animation:tick 40s linear infinite;}
+.ticker span{font-family:'DM Mono',monospace;font-size:.5rem;letter-spacing:.25em;color:var(--ink);padding:0 2.5rem;}
+.ticker span.a{color:var(--ink);}
+@keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* HERO */
+#hero{
+  position:relative;width:100vw;height:100vh;
+  overflow:hidden;padding-top:2.6rem;
+}
+#hero-canvas{
+  position:absolute;top:2.6rem;left:0;
+  width:100%;height:calc(100% - 2.6rem);
+}
+
+.coord{position:absolute;font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.18em;color:rgba(26,22,20,.22);pointer-events:all;z-index:5;cursor:none;transition:color .3s;}
+.coord:hover{color:rgba(26,22,20,.7);}
+.coord .city-name{
+  display:none;
+  font-family:'Times New Roman',Times,serif;
+  font-size:1.1rem;letter-spacing:.12em;
+  font-style:italic;line-height:1;
+}
+.coord .coord-text{ display:block; transition: opacity .25s; }
+.coord.hovered .coord-text{ display:none; }
+.coord.hovered .city-name{ display:block; }
+[data-city="TAIPEI"] .coord-text, [data-city="TAIPEI"] .city-name{ color:#000; }
+[data-city="TAIPEI"]:hover{ color:#000; }
+[data-city="EINDHOVEN"] .coord-text, [data-city="EINDHOVEN"] .city-name{ color:#fff; }
+[data-city="EINDHOVEN"]:hover{ color:#fff; }
+.coord-tl{top:3.5rem;left:2rem;}
+.coord-tr{top:3.5rem;right:2rem;text-align:right;}
+.coord-bl{bottom:2.5rem;left:2rem;}
+.coord-br{bottom:2.5rem;right:2rem;text-align:right;}
+
+/* SECTIONS */
+.section-pad{padding:7rem 3rem;max-width:1100px;margin:0 auto;}
+.rule{max-width:1100px;margin:0 auto;height:1px;background:var(--ink-faint);}
+.sh{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4rem;}
+.sh-title{
+  font-family:'Times New Roman',Times,serif;
+  font-size:clamp(2.5rem,7vw,5rem);
+  letter-spacing:.04em;color:var(--ink);line-height:1;font-weight:400;
+}
+.sh-idx{font-family:'DM Mono',monospace;font-size:.42rem;letter-spacing:.3em;color:var(--ink-mid);}
+
+/* MANIFESTO */
+#manifesto .section-pad{display:grid;grid-template-columns:72px 1fr;gap:3rem;}
+.man-label{font-family:'DM Mono',monospace;font-size:.4rem;letter-spacing:.35em;color:var(--ink-mid);writing-mode:vertical-rl;transform:rotate(180deg);align-self:start;}
+.man-body p{font-family:'Cormorant Garamond',serif;font-size:clamp(1.15rem,2.3vw,1.75rem);line-height:1.7;font-weight:300;color:var(--ink);margin-bottom:1.4rem;}
+.man-body p em{color:var(--accent);font-style:italic;}
+.man-formula{font-family:'DM Mono',monospace;font-size:.44rem;letter-spacing:.26em;color:var(--ink-mid);line-height:2.2;margin-top:2.5rem;border-left:1px solid var(--ink-faint);padding-left:1.4rem;}
+.man-formula span{color:var(--accent);}
+
+/* COLLECTION */
+.col-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--ink-faint);}
+.col-item{background:var(--bg);aspect-ratio:3/4;position:relative;overflow:hidden;cursor:none;}
+.col-item:nth-child(2){transform:translateY(2.5rem);}
+.col-item:nth-child(3){transform:translateY(-2.5rem);}
+.col-canvas{position:absolute;inset:0;width:100%;height:100%;}
+.col-info{position:absolute;bottom:0;left:0;right:0;padding:1.3rem;background:linear-gradient(transparent,rgba(235,235,235,.96));z-index:2;}
+.col-node{font-family:'DM Mono',monospace;font-size:.38rem;letter-spacing:.3em;color:var(--ink-mid);margin-bottom:.3rem;}
+.col-name{font-family:'Times New Roman',Times,serif;font-size:1.5rem;letter-spacing:.06em;color:var(--ink);font-weight:400;}
+.col-line{position:absolute;bottom:0;left:0;width:0;height:1px;background:var(--ink);transition:width .5s ease;z-index:3;}
+.col-item:hover .col-line{width:100%;}
+
+/* THEORY */
+#theory .section-pad{display:grid;grid-template-columns:1fr 1fr;gap:5rem;align-items:center;}
+.th-formula{font-family:'DM Mono',monospace;font-size:.42rem;letter-spacing:.26em;color:var(--ink-mid);line-height:2.4;margin-bottom:2rem;}
+.th-formula b{color:var(--ink);}
+.th-heading{
+  font-family:'Times New Roman',Times,serif;
+  font-size:clamp(2rem,5vw,3.6rem);
+  letter-spacing:.04em;line-height:1.2;color:var(--ink);margin-bottom:1.5rem;font-weight:400;
+  font-style:italic;
+}
+.th-text{font-family:'Cormorant Garamond',serif;font-size:1rem;line-height:1.9;font-weight:300;color:var(--ink-mid);}
+#theory-canvas{width:100%;aspect-ratio:1;display:block;}
+
+/* FOOTER */
+footer{max-width:1100px;margin:0 auto;padding:3.5rem 3rem 5rem;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:2rem;}
+.ft-logo{font-family:'Times New Roman',Times,serif;font-size:3rem;letter-spacing:.1em;color:var(--ink-faint);font-weight:400;}
+.ft-links{display:flex;flex-direction:column;gap:.55rem;}
+.ft-links a{font-family:'DM Mono',monospace;font-size:.42rem;letter-spacing:.28em;color:var(--ink-mid);text-decoration:none;transition:color .25s;}
+.ft-links a:hover{color:var(--ink);}
+.ft-copy{font-family:'DM Mono',monospace;font-size:.4rem;letter-spacing:.2em;color:var(--ink-faint);line-height:1.9;}
+
+/* REVEAL */
+.rv{opacity:0;transform:translateY(20px);transition:opacity .9s ease,transform .9s ease;}
+.rv.vis{opacity:1;transform:none;}
+.rv-d1{transition-delay:.12s}.rv-d2{transition-delay:.24s}.rv-d3{transition-delay:.36s}
+
+@media(max-width:768px){
+
+  .col-info{
+    padding:1rem;
+  }
+
+  .col-name{
+    font-size:.8rem;
+    letter-spacing:.02em;
+    white-space:normal;
+    overflow-wrap:break-word;
+  }
+
+  .col-node{
+    font-size:.34rem;
+    letter-spacing:.22em;
+  }
+
+  nav{
+    grid-template-columns:repeat(5,1fr);
+    height:2.4rem;
+  }
+
+  .nav-cell a{
+    font-size:.38rem;
+    letter-spacing:.12em;
+  }
+
+  .nav-brand a{
+    font-size:1rem;
+    letter-spacing:.06em;
+  }
+
+  #hero{
+    height:100svh;
+    padding-top:2.4rem;
+  }
+
+  #hero-canvas{
+    top:2.4rem;
+    height:calc(100svh - 2.4rem);
+  }
+
+  .coord{
+    font-size:.34rem;
+    letter-spacing:.1em;
+  }
+
+  .coord-tl{top:3rem;left:1rem;}
+  .coord-tr{top:3rem;right:1rem;}
+  .coord-bl{bottom:2.2rem;left:1rem;}
+  .coord-br{bottom:2.2rem;right:1rem;}
+
+  .section-pad{
+    padding:4.5rem 1.25rem;
+  }
+
+  .sh{
+    flex-direction:column;
+    align-items:flex-start;
+    gap:1rem;
+  }
+
+  footer{
+    padding:3rem 1.25rem 5rem;
+    align-items:flex-start;
+  }
+}
+</style>
+</head>
+<body>
+
+<div id="cur"></div>
+<div id="cur-ring"></div>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="ld-wrap">
+    <canvas id="ld-canvas" width="160" height="160"></canvas>
+  </div>
+  <div class="ld-lbl">CONNECTING TO A NEW UNIVERSE ...</div>
+</div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-cell"><a href="#">SHOP</a></div>
+  <div class="nav-cell"><a href="#collection">COLLECTION</a></div>
+  <div class="nav-cell nav-brand"><a href="#">EDGE</a></div>
+  <div class="nav-cell"><a href="#">ACCOUNT</a></div>
+  <div class="nav-cell"><a href="#">CART</a></div>
+</nav>
+
+<!-- TICKER -->
+<div class="ticker-wrap"><div class="ticker">
+  <span>CONNECTING TO A NEW UNIVERSE ...</span><span class="a">◌</span>
+  <span>PROJEKT00 LAUNCHING</span><span class="a">◌</span>
+  <span>COLLECTION 2026</span><span class="a">◌</span>
+  <span>CONNECTING TO A NEW UNIVERSE ...</span><span class="a">◌</span>
+  <span>PROJEKT00 LAUNCHING</span><span class="a">◌</span>
+  <span>COLLECTION 2026</span><span class="a">◌</span>
+</div></div>
+
+<!-- HERO -->
+<section id="hero">
+  <canvas id="hero-canvas"></canvas>
+  <div class="coord coord-tl" data-city="TAIPEI"><span class="coord-text">25.0330° N<br>121.5654° E</span><span class="city-name">Taipei</span></div>
+  <div class="coord coord-tr" data-city="EINDHOVEN"><span class="coord-text">51.4416° N<br>5.4697° E</span><span class="city-name">Eindhoven</span></div>
+  <div class="coord coord-bl">UNIVERSE_07</div>
+  <div class="coord coord-br">SD — 001</div>
+</section>
+
+<div class="rule"></div>
+<section id="manifesto">
+  <div class="section-pad">
+    <div class="man-label rv">MANIFESTO — 2026</div>
+    <div class="man-body rv rv-d1">
+      <p>In graph theory, an <em>edge</em> connects two distinct nodes. Without it they are isolated, unreachable and unknown to one another.</p>
+      <p>EDGE is that connection. Between fashion and the infinite parallel universes that exist beyond the visible spectrum of style.</p>
+      <p>Every garment is a <em>transition</em>. Every collection, a new graph explored.</p>
+      <!--div class="man-formula">
+        G = (V, E)<br>
+        WHERE V = {<span>SELF</span>, <span>UNIVERSE_N</span>}<br>
+        AND E = {<span>THIS COLLECTION</span>}
+      </div-->
+    </div>
+  </div>
+</section>
+
+<div class="rule"></div>
+<section id="collection">
+  <div class="section-pad">
+    <div class="sh rv">
+      <h2 class="sh-title">Collection</h2>
+      <span class="sh-idx">SS26 — NODE SERIES</span>
+    </div>
+    <div class="col-grid">
+      <div class="col-item rv rv-d1">
+        <canvas class="col-canvas" data-rings="3" data-nodes="4" data-offset="0"></canvas>
+        <div class="col-line"></div>
+        <div class="col-info"><div class="col-node">00</div><div class="col-name">PROJEKT00</div></div>
+      </div>
+      <!--div class="col-item rv rv-d2">
+        <canvas class="col-canvas" data-rings="4" data-nodes="5" data-offset="1"></canvas>
+        <div class="col-line"></div>
+        <div class="col-info"><div class="col-node">01</div><div class="col-name">Void Coat</div></div-->
+      </div>
+      <!--div class="col-item rv rv-d3">
+        <canvas class="col-canvas" data-rings="3" data-nodes="6" data-offset="2"></canvas>
+        <div class="col-line"></div>
+        <div class="col-info"><div class="col-node">02</div><div class="col-name">Vertex Set</div></div-->
+      </div>
+    </div>
+  </div>
+</section>
+
+<!--div class="rule"></div>
+<section id="theory">
+  <div class="section-pad">
+    <div class="rv">
+      <div class="th-formula">
+        E(G) = {(u,v) : u,v ∈ <b>V(G)</b>, u ≠ v}<br>
+        WHERE EACH EDGE IS A PIECE OF CLOTHING<br>
+        AND EACH NODE IS A UNIVERSE
+      </div>
+      <h2 class="th-heading">The<br>Mathematics<br>of Style</h2>
+      <p class="th-text">Graph theory maps the invisible relationships between things. Every garment is an edge, every person a node, every outfit a path through an infinite graph of possible identities.</p>
+    </div>
+    <canvas id="theory-canvas" class="rv rv-d1"></canvas>
+  </div>
+</section-->
+
+<div class="rule"></div>
+<footer>
+  <div class="ft-logo">EDGE</div>
+  <div class="ft-links">
+    <a href="#">SHOP</a><a href="#">COLLECTION</a>
+    <a href="#">ABOUT</a><a href="#">CONTACT</a><a href="#">ARCHIVE</a>
+  </div>
+  <div class="ft-copy">© 2026 EDGE — EKMASK SD07<br>ALL NODES CONNECTED</div>
+</footer>
+
+<script>
+const PI2 = Math.PI * 2;
+function hiDPI(canvas, w, h) {
+  const d = window.devicePixelRatio || 1;
+  canvas.width = w*d; canvas.height = h*d;
+  canvas.style.width = w+'px'; canvas.style.height = h+'px';
+  const ctx = canvas.getContext('2d'); ctx.scale(d,d); return ctx;
+}
+
+/* CURSOR */
+const cur=document.getElementById('cur'), curR=document.getElementById('cur-ring');
+let mx=window.innerWidth/2, my=window.innerHeight/2, rx=mx, ry=my;
+document.addEventListener('mousemove', e=>{ mx=e.clientX; my=e.clientY; });
+(function ac(){ rx+=(mx-rx)*.1; ry+=(my-ry)*.1; cur.style.left=mx+'px'; cur.style.top=my+'px'; curR.style.left=rx+'px'; curR.style.top=ry+'px'; requestAnimationFrame(ac); })();
+
+/* LOADER */
+(function(){
+  const c = document.getElementById('ld-canvas');
+  const W = 160, H = 160;
+  const ctx = hiDPI(c, W, H);
+
+  const CAM_DIST = 5.0;
+  const D = 1.0;
+  const NODE_A_LOCAL = [-D, 0, 0];
+  const NODE_B_LOCAL = [ D, 0, 0];
+  const R_A = 0.30;
+  const R_B = 0.30;
+
+  let angleX = 0, angleY = 0, angleZ = 0;
+  const speedX = 0.0031;
+  const speedY = 0.0047;
+  const speedZ = 0.0019;
+
+  function rotate3D(p, ax, ay, az) {
+    let [x, y, z] = p;
+
+    let y1 = y*Math.cos(ax) - z*Math.sin(ax);
+    let z1 = y*Math.sin(ax) + z*Math.cos(ax);
+    y = y1; z = z1;
+
+    let x2 = x*Math.cos(ay) + z*Math.sin(ay);
+    let z2 = -x*Math.sin(ay) + z*Math.cos(ay);
+    x = x2; z = z2;
+
+    let x3 = x*Math.cos(az) - y*Math.sin(az);
+    let y3 = x*Math.sin(az) + y*Math.cos(az);
+    x = x3; y = y3;
+
+    return [x, y, z];
+  }
+
+  function project(p3d, cx, cy, scale) {
+    const [x, y, z] = p3d;
+    const persp = CAM_DIST / (CAM_DIST - z);
+    return {
+      x: cx + x * persp * scale,
+      y: cy + y * persp * scale,
+      z,
+      persp
+    };
+  }
+
+  function drawSphere3D(ctx, px, py, pz, r) {
+    const depthFade = 0.55 + 0.45 * Math.max(0, Math.min(1, (pz + 1) * 0.5));
+
+    const body = ctx.createRadialGradient(px - r*0.32, py - r*0.35, r*0.04, px, py, r);
+    const brightness = Math.floor(225 * depthFade);
+    const mid = Math.floor(185 * depthFade);
+    const dark = Math.floor(130 * depthFade);
+
+    body.addColorStop(0, `rgb(${brightness},${brightness-4},${brightness-8})`);
+    body.addColorStop(0.45, `rgb(${mid},${mid-4},${mid-7})`);
+    body.addColorStop(1, `rgb(${dark},${dark-4},${dark-7})`);
+
+    ctx.beginPath();
+    ctx.arc(px, py, r, 0, PI2);
+    ctx.fillStyle = body;
+    ctx.fill();
+
+    const spec = ctx.createRadialGradient(px - r*0.28, py - r*0.30, 0, px - r*0.28, py - r*0.30, r*0.5);
+    spec.addColorStop(0, 'rgba(184,222,228,0.82)');
+    spec.addColorStop(0.4, 'rgba(184,222,228,0.22)');
+    spec.addColorStop(1, 'rgba(184,222,228,0)');
+
+    ctx.beginPath();
+    ctx.arc(px, py, r, 0, PI2);
+    ctx.fillStyle = spec;
+    ctx.fill();
+  }
+
+  function drawEdge3D(ctx, pa, pb, rA, rB) {
+    const dx = pb.x - pa.x;
+    const dy = pb.y - pa.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist < 1) return;
+
+    const ux = dx / dist;
+    const uy = dy / dist;
+
+    const ex1 = pa.x + ux * rA;
+    const ey1 = pa.y + uy * rA;
+    const ex2 = pb.x - ux * rB;
+    const ey2 = pb.y - uy * rB;
+
+    const depthAvg = 0.55 + 0.45 * ((pa.z + pb.z) * 0.5 + 1) * 0.5;
+
+    ctx.beginPath();
+    ctx.moveTo(ex1, ey1);
+    ctx.lineTo(ex2, ey2);
+    ctx.strokeStyle = `rgba(210,175,165,${0.75 * depthAvg})`;
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+  }
+
+  function draw(){
+    ctx.clearRect(0, 0, W, H);
+
+    angleX += speedX;
+    angleY += speedY;
+    angleZ += speedZ;
+
+    const cx = W / 2;
+    const cy = H / 2;
+    const scale = Math.min(W, H) * 0.28;
+
+    const a3d = rotate3D(NODE_A_LOCAL, angleX, angleY, angleZ);
+    const b3d = rotate3D(NODE_B_LOCAL, angleX, angleY, angleZ);
+
+    const pa = project(a3d, cx, cy, scale);
+    const pb = project(b3d, cx, cy, scale);
+
+    const rAScreen = R_A * pa.persp * scale;
+    const rBScreen = R_B * pb.persp * scale;
+
+    if (pa.z >= pb.z) {
+      drawEdge3D(ctx, pa, pb, rAScreen, rBScreen);
+      drawSphere3D(ctx, pb.x, pb.y, pb.z, rBScreen);
+      drawSphere3D(ctx, pa.x, pa.y, pa.z, rAScreen);
+    } else {
+      drawEdge3D(ctx, pa, pb, rAScreen, rBScreen);
+      drawSphere3D(ctx, pa.x, pa.y, pa.z, rAScreen);
+      drawSphere3D(ctx, pb.x, pb.y, pb.z, rBScreen);
+    }
+
+    requestAnimationFrame(draw);
+  }
+
+  draw();
+
+  window.addEventListener('load', () =>
+    setTimeout(() => document.getElementById('loader').classList.add('out'), 2500)
+  );
+})();
+/* ════════════════════════════════════════════════════════
+   HERO — 3D two-node one-edge graph rotating arbitrarily
+   Uses a full 3D rotation matrix tumbling on all axes
+════════════════════════════════════════════════════════ */
+(function(){
+  const canvas = document.getElementById('hero-canvas');
+  let W, H, ctx;
+  let t = 0;
+
+  /* 
+    3D scene:
+    - Two sphere nodes in 3D space, separated along X axis
+    - One edge (cylinder approximated as a line with perspective width)
+    - The entire scene rotates around a slowly-drifting axis — 
+      Euler angles rx,ry,rz each advance at different irrational speeds
+      so the rotation never exactly repeats (tumbling in free space)
+  */
+
+  // Node positions in local 3D space (before rotation)
+  // Placed symmetrically around origin, separated by distance D
+  const D = 1.0; // half-distance
+  const NODE_A_LOCAL = [-D, 0, 0];
+  const NODE_B_LOCAL = [ D, 0, 0];
+  const R_A = 0.30; // radius node A
+  const R_B = 0.30; // radius node B (equal)
+
+  // Rotation angles — advance at different irrational-ratio speeds
+  let angleX = 0, angleY = 0, angleZ = 0;
+  const speedX = 0.0031;
+  const speedY = 0.0047;
+  const speedZ = 0.0019;
+
+  // 3D rotation matrix (combined Rx * Ry * Rz)
+  function rotate3D(p, ax, ay, az) {
+    let [x, y, z] = p;
+    // Rotate around X
+    let y1 = y*Math.cos(ax) - z*Math.sin(ax);
+    let z1 = y*Math.sin(ax) + z*Math.cos(ax);
+    y = y1; z = z1;
+    // Rotate around Y
+    let x2 = x*Math.cos(ay) + z*Math.sin(ay);
+    let z2 = -x*Math.sin(ay) + z*Math.cos(ay);
+    x = x2; z = z2;
+    // Rotate around Z
+    let x3 = x*Math.cos(az) - y*Math.sin(az);
+    let y3 = x*Math.sin(az) + y*Math.cos(az);
+    x = x3; y = y3;
+    return [x, y, z];
+  }
+
+  // Perspective projection
+  // Camera sits at z = +camDist, looks toward origin.
+  // A point at 3D (x,y,z) projects to screen as:
+  //   sx = cx + x * (camDist / (camDist - z)) * scale
+  //   sy = cy + y * (camDist / (camDist - z)) * scale
+  // Since both nodes are symmetric around origin (midpoint = [0,0,0] always),
+  // their projected midpoint is always (cx, cy) — perfectly centred.
+  const CAM_DIST = 5.0; // camera distance from origin along +Z
+  function project(p3d, cx, cy, scale) {
+    const [x, y, z] = p3d;
+    const persp = CAM_DIST / (CAM_DIST - z); // perspective factor > 0
+    return {
+      x: cx + x * persp * scale,
+      y: cy + y * persp * scale,
+      z: z,
+      persp // used to scale sphere radius
+    };
+  }
+
+  // Draw a sphere with 3D shading + perspective size
+  // r is already the final screen radius
+  function drawSphere3D(ctx, px, py, pz, r) {
+    if (r < 1) return;
+    // Depth-based shade: z ranges roughly -1..+1 after rotation
+    const depthFade = 0.55 + 0.45 * Math.max(0, Math.min(1, (pz + 1) * 0.5));
+
+    // Outer soft glow
+    const glowR = r * 1.25;
+    const glow = ctx.createRadialGradient(px, py, r * 0.6, px, py, glowR);
+    glow.addColorStop(0, `rgba(26,22,20,0)`);
+    glow.addColorStop(1, `rgba(26,22,20,0.04)`);
+    ctx.beginPath(); ctx.arc(px, py, glowR, 0, PI2);
+    ctx.fillStyle = glow; ctx.fill();
+
+    // Shadow beneath (slightly offset down-right)
+    const shadowOff = r * 0.18;
+    const shadow = ctx.createRadialGradient(px+shadowOff, py+shadowOff, 0, px+shadowOff, py+shadowOff, r*1.1);
+    shadow.addColorStop(0, 'rgba(26,22,20,0.12)');
+    shadow.addColorStop(1, 'rgba(26,22,20,0)');
+    ctx.beginPath(); ctx.arc(px+shadowOff, py+shadowOff, r*1.1, 0, PI2);
+    ctx.fillStyle = shadow; ctx.fill();
+
+    // Main sphere body — light grey on dark bg
+    const lightX = px - r * 0.32;
+    const lightY = py - r * 0.35;
+    const body = ctx.createRadialGradient(lightX, lightY, r*0.04, px, py, r);
+    const brightness = Math.floor(225 * depthFade);
+    const mid       = Math.floor(185 * depthFade);
+    const dark      = Math.floor(130 * depthFade);
+    body.addColorStop(0,   `rgb(${brightness},${brightness-4},${brightness-8})`);
+    body.addColorStop(0.45,`rgb(${mid},${mid-4},${mid-7})`);
+    body.addColorStop(1,   `rgb(${dark},${dark-4},${dark-7})`);
+    ctx.beginPath(); ctx.arc(px, py, r, 0, PI2);
+    ctx.fillStyle = body; ctx.fill();
+
+    // Ice-blue specular highlight
+    const specX = px - r * 0.28;
+    const specY = py - r * 0.30;
+    const spec = ctx.createRadialGradient(specX, specY, 0, specX, specY, r * 0.5);
+    spec.addColorStop(0,   'rgba(184,222,228,0.82)');
+    spec.addColorStop(0.4, 'rgba(184,222,228,0.22)');
+    spec.addColorStop(1,   'rgba(184,222,228,0)');
+    ctx.beginPath(); ctx.arc(px, py, r, 0, PI2);
+    ctx.fillStyle = spec; ctx.fill();
+
+    // Thin outline ring
+    ctx.beginPath(); ctx.arc(px, py, r, 0, PI2);
+    ctx.strokeStyle = `rgba(26,22,20,${0.1 * depthFade})`;
+    ctx.lineWidth = 0.6; ctx.stroke();
+  }
+
+  // Draw the edge between two projected points
+  // rA, rB are screen-space sphere radii (used for endpoint caps)
+  function drawEdge3D(ctx, pa, pb, rA, rB) {
+    const dx = pb.x - pa.x;
+    const dy = pb.y - pa.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if(dist < 1) return;
+    const ux = dx/dist, uy = dy/dist;
+    const nx = -uy, ny = ux; // perpendicular
+
+    // Compute edge endpoints on sphere surfaces
+    const capA = rA;
+    const capB = rB;
+    const ex1 = pa.x + ux * capA;
+    const ey1 = pa.y + uy * capA;
+    const ex2 = pb.x - ux * capB;
+    const ey2 = pb.y - uy * capB;
+
+    // Average depth for edge opacity
+    const depthAvg = 0.55 + 0.45 * ((pa.z + pb.z) * 0.5 + 1) * 0.5;
+
+    // Main edge line
+    ctx.beginPath();
+    ctx.moveTo(ex1, ey1); ctx.lineTo(ex2, ey2);
+    ctx.strokeStyle = `rgba(210,175,165,${0.65 * depthAvg})`;
+    ctx.lineWidth = 1.2; ctx.setLineDash([]); ctx.stroke();
+
+    // Parallel dashed offset line
+    const off = 4;
+    ctx.beginPath();
+    ctx.moveTo(ex1 + nx*off, ey1 + ny*off);
+    ctx.lineTo(ex2 + nx*off, ey2 + ny*off);
+    ctx.strokeStyle = `rgba(210,175,165,${0.18 * depthAvg})`;
+    ctx.lineWidth = 0.5; ctx.setLineDash([5, 9]); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Travelling particle
+    const pulse = (Math.sin(t * 0.013) + 1) / 2;
+    const px2 = ex1 + (ex2 - ex1) * pulse;
+    const py2 = ey1 + (ey2 - ey1) * pulse;
+    ctx.beginPath(); ctx.arc(px2, py2, 2.2, 0, PI2);
+    ctx.fillStyle = `rgba(26,22,20,${0.38 * depthAvg})`; ctx.fill();
+
+    // Tick marks at endpoints
+    const tickLen = 6;
+    for(const [ex, ey] of [[ex1,ey1],[ex2,ey2]]){
+      ctx.beginPath();
+      ctx.moveTo(ex + nx*tickLen, ey + ny*tickLen);
+      ctx.lineTo(ex - nx*tickLen, ey - ny*tickLen);
+      ctx.strokeStyle = `rgba(26,22,20,${0.18 * depthAvg})`;
+      ctx.lineWidth = 0.6; ctx.stroke();
+    }
+  }
+
+  function resize() {
+    W = canvas.clientWidth;
+    H = canvas.clientHeight;
+    ctx = hiDPI(canvas, W, H);
+  }
+
+  // ── WAVE LAYER SYSTEM ──
+  // Each region is a TRUE TRIANGLE: corner point + two boundary points on adjacent edges.
+  // The hypotenuse is the wave boundary — displaced perpendicular to the diagonal.
+  // This gives hard triangular regions with a living, flowing edge.
+
+  function drawTriangleWave(ctx, W, H, color, corner, reachX, reachY, waveCfg, smooth = 0.18) {
+    let cx, cy, ex1, ey1, ex2, ey2, perpX, perpY;
+    const OV = 0.08; // small overshoot — just enough to hide endpoints off-canvas
+
+    if (corner === 'TL') {
+      cx=0; cy=0;
+      ex1=(reachX+OV)*W; ey1=-OV*H;
+      ex2=-OV*W;         ey2=(reachY+OV)*H;
+      perpX= 1/Math.SQRT2; perpY= 1/Math.SQRT2;
+    } else if (corner === 'TR') {
+      cx=W; cy=0;
+      ex1=(1-reachX-OV)*W; ey1=-OV*H;
+      ex2=(1+OV)*W;         ey2=(reachY+OV)*H;
+      perpX=-1/Math.SQRT2; perpY= 1/Math.SQRT2;
+    } else if (corner === 'BL') {
+      cx=0; cy=H;
+      ex1=(reachX+OV)*W; ey1=(1+OV)*H;
+      ex2=-OV*W;         ey2=(1-reachY-OV)*H;
+      perpX= 1/Math.SQRT2; perpY=-1/Math.SQRT2;
+    } else { // BR
+      cx=W; cy=H;
+      ex1=(1-reachX-OV)*W; ey1=(1+OV)*H;
+      ex2=(1+OV)*W;         ey2=(1-reachY-OV)*H;
+      perpX=-1/Math.SQRT2; perpY=-1/Math.SQRT2;
+    }
+
+    const STEPS = 220;
+    const S = Math.min(W, H);
+    ctx.beginPath();
+    ctx.moveTo(ex1, ey1);
+    for (let i = 0; i <= STEPS; i++) {
+      const s = i / STEPS;
+      const bx = ex1 + (ex2 - ex1) * s;
+      const by = ey1 + (ey2 - ey1) * s;
+      let disp = 0;
+      for (const w of waveCfg) {
+        disp += w.amp * S * Math.sin(w.freq * s * PI2 + w.spd * t + w.phase);
+      }
+      const sr = smooth * S;
+      disp = Math.tanh(disp / sr) * sr;
+      ctx.lineTo(bx + perpX * disp, by + perpY * disp);
+    }
+    ctx.lineTo(ex2, ey2);
+    ctx.lineTo(cx, cy);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+
+  const WV_BK_TR = [
+    { freq: 0.5, amp: 0.12, spd:  0.0012, phase: 0.0 },
+    { freq: 1.6, amp: 0.035,spd: -0.0018, phase: 1.2 },
+    { freq: 2.8, amp: 0.015,spd:  0.0022, phase: 2.4 },
+    { freq: 4.2, amp: 0.028,spd: -0.0010, phase: 0.8 },
+    // { freq: 6.0, amp: 0.004,spd:  0.0028, phase: 1.9 },
+  ];
+  const WV_BK_BL = [
+    { freq: 0.4, amp: 0.041, spd: -0.0011, phase: 1.1 },
+    { freq: 1.5, amp: 0.12,spd:  0.0017, phase: 2.3 },
+    { freq: 2.6, amp: 0.055,spd: -0.0021, phase: 0.5 },
+    { freq: 4.0, amp: 0.008,spd:  0.0013, phase: 1.7 },
+    // { freq: 5.8, amp: 0.044,spd: -0.0027, phase: 3.0 },
+  ];
+  const WV_PK_TL = [
+    { freq: 0.5, amp: 0.045,spd:  0.0010, phase: 0.4 },
+    { freq: 1.8, amp: 0.038,spd: -0.0015, phase: 1.6 },
+    { freq: 3.0, amp: 0.026,spd:  0.0020, phase: 2.8 },
+    { freq: 4.5, amp: 0.049,spd: -0.0012, phase: 0.2 },
+    // { freq: 6.2, amp: 0.005,spd:  0.0025, phase: 1.5 },
+  ];
+  const WV_PK_BR = [
+    { freq: 0.4, amp: 0.040,spd: -0.0010, phase: 1.8 },
+    { freq: 1.7, amp: 0.005,spd:  0.0016, phase: 0.3 },
+    { freq: 2.9, amp: 0.033,spd: -0.0022, phase: 2.1 },
+    { freq: 4.4, amp: 0.019,spd:  0.0013, phase: 1.0 },
+    // { freq: 6.1, amp: 0.015,spd: -0.0024, phase: 2.7 },
+  ];
+  const WV_PL_BR = [
+    { freq: 0.6, amp: 0.15,spd:   0.0009, phase: 0.7 },
+    { freq: 1.4, amp: 0.25,spd:  -0.0014, phase: 1.5 },
+    { freq: 2.5, amp: 0.078,spd:  0.0019, phase: 0.1 },
+    { freq: 3.8, amp: 0.040,spd: -0.0011, phase: 2.3 },
+    // { freq: 5.5, amp: 0.055,spd:  0.0023, phase: 1.2 },
+  ];
+
+  const BK = 'rgb(6,4,5)';
+  const PK = 'rgb(210,150,155)';
+  const PL = 'rgb(72,34,52)';
+
+  function draw() {
+    if(!ctx){ requestAnimationFrame(draw); return; }
+
+    // ── Base: grey background ──
+    ctx.fillStyle = '#8a8f94';
+    ctx.fillRect(0, 0, W, H);
+
+    // ── Layer 1: Plum — BR triangle ──
+    drawTriangleWave(ctx, W, H, PL, 'BR', 0.70, 0.35, WV_PL_BR, 0.18);
+
+    // ── Layer 2: Pink — TL + BR triangles ──
+    drawTriangleWave(ctx, W, H, PK, 'TL', 0.65, 1.0, WV_PK_TL, 0.18);
+    drawTriangleWave(ctx, W, H, PK, 'BR', 0.70, 0.20, WV_PK_BR, 0.18);
+
+    // ── Layer 3: Black — TR + BL triangles ──
+    drawTriangleWave(ctx, W, H, BK, 'TR', 0.60, 0.50, WV_BK_TR, 0.18);
+    drawTriangleWave(ctx, W, H, BK, 'BL', 0.70, 0.45, WV_BK_BL, 0.18);
+
+
+    // ── Advance rotation angles ──
+    angleX += speedX;
+    angleY += speedY;
+    angleZ += speedZ;
+
+    const cx = W / 2;
+    const cy = H / 2;
+    const scale = Math.min(W, H) * 0.28; // scale from unit space to pixels
+
+    // Rotate both nodes around the shared origin (midpoint stays at world [0,0,0])
+    const a3d = rotate3D(NODE_A_LOCAL, angleX, angleY, angleZ);
+    const b3d = rotate3D(NODE_B_LOCAL, angleX, angleY, angleZ);
+
+    // Project to 2D — origin always maps to (cx, cy)
+    const pa = project(a3d, cx, cy, scale);
+    const pb = project(b3d, cx, cy, scale);
+
+    // Sphere screen radii = world radius * perspective factor * scale
+    const rAScreen = R_A * pa.persp * scale;
+    const rBScreen = R_B * pb.persp * scale;
+
+    // Painter's algorithm — draw far node first
+    const aIsFront = pa.z >= pb.z;
+
+    if (aIsFront) {
+      drawEdge3D(ctx, pa, pb, rAScreen, rBScreen);
+      drawSphere3D(ctx, pb.x, pb.y, pb.z, rBScreen);
+      drawSphere3D(ctx, pa.x, pa.y, pa.z, rAScreen);
+    } else {
+      drawEdge3D(ctx, pa, pb, rAScreen, rBScreen);
+      drawSphere3D(ctx, pa.x, pa.y, pa.z, rAScreen);
+      drawSphere3D(ctx, pb.x, pb.y, pb.z, rBScreen);
+    }
+
+    t++; requestAnimationFrame(draw);
+  }
+
+  resize();
+  window.addEventListener('resize', resize);
+  draw();
+})();
+
+/* CARD CANVASES */
+document.querySelectorAll('.col-canvas').forEach(canvas=>{
+  const nR=parseInt(canvas.dataset.rings)||3, nN=parseInt(canvas.dataset.nodes)||4, off=parseFloat(canvas.dataset.offset)||0;
+  let W,H,t=off*200,ctx;
+  function resize(){ W=canvas.clientWidth; H=canvas.clientHeight; ctx=hiDPI(canvas,W,H); }
+  function draw(){
+    if(!ctx){requestAnimationFrame(draw);return;}
+    ctx.clearRect(0,0,W,H);
+    const cx=W/2, cy=H*.42, base=Math.min(W,H)*.27;
+    for(let ri=0;ri<nR;ri++){
+      const frac=(ri+1)/nR, r=base*(.38+frac*.62), spd=.0005*(nR-ri), n=Math.max(3,nN-ri), ph=ri*.9+off, dash=[3+ri,7+ri*2];
+      ctx.beginPath(); ctx.arc(cx,cy,r,0,PI2);
+      ctx.setLineDash(dash); ctx.strokeStyle='rgba(26,22,20,.14)'; ctx.lineWidth=.55; ctx.stroke(); ctx.setLineDash([]);
+      const pts=[];
+      for(let i=0;i<n;i++){
+        const a=(PI2/n)*i+t*spd+ph, nx=cx+Math.cos(a)*r, ny=cy+Math.sin(a)*r;
+        pts.push({x:nx,y:ny});
+        const perp=a+PI2/4, bs=2.8;
+        ctx.beginPath(); ctx.moveTo(nx+Math.cos(perp)*bs,ny+Math.sin(perp)*bs); ctx.lineTo(nx-Math.cos(perp)*bs,ny-Math.sin(perp)*bs);
+        ctx.strokeStyle='rgba(26,22,20,.15)'; ctx.lineWidth=.45; ctx.stroke();
+        ctx.beginPath(); ctx.arc(nx,ny,3,0,PI2); ctx.strokeStyle='rgba(26,22,20,.11)'; ctx.lineWidth=.45; ctx.stroke();
+        ctx.beginPath(); ctx.arc(nx,ny,1.3,0,PI2); ctx.fillStyle='rgba(26,22,20,.35)'; ctx.fill();
+      }
+      ctx.setLineDash([1,4]); ctx.strokeStyle='rgba(26,22,20,.06)'; ctx.lineWidth=.3;
+      for(let i=0;i<pts.length;i++){ctx.beginPath();ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[(i+1)%pts.length].x,pts[(i+1)%pts.length].y);ctx.stroke();}
+      ctx.setLineDash([]);
+    }
+    ctx.beginPath(); ctx.arc(cx,cy,5.5,0,PI2); ctx.strokeStyle='rgba(26,22,20,.09)'; ctx.lineWidth=.45; ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx,cy,1.8,0,PI2); ctx.fillStyle='rgba(26,22,20,.35)'; ctx.fill();
+    t++; requestAnimationFrame(draw);
+  }
+  const ro=new ResizeObserver(()=>resize()); ro.observe(canvas); resize(); draw();
+});
+
+/* THEORY CANVAS */
+(function(){
+  const canvas=document.getElementById('theory-canvas'); if(!canvas)return;
+  let W,H,t=0,ctx;
+  const ND=[{lx:.5,ly:.07,lb:'SELF'},{lx:.1,ly:.38,lb:'U-NOIR'},{lx:.9,ly:.3,lb:'U-VOID'},{lx:.25,ly:.72,lb:'U-SILK'},{lx:.78,ly:.74,lb:'U-METAL'},{lx:.5,ly:.9,lb:'U-∞'}];
+  const ED=[[0,1],[0,2],[1,3],[2,4],[3,5],[4,5],[0,3],[0,4],[1,2],[2,3]];
+  function resize(){ W=canvas.clientWidth; H=canvas.clientHeight; ctx=hiDPI(canvas,W,H); }
+  function draw(){
+    if(!ctx){requestAnimationFrame(draw);return;}
+    ctx.clearRect(0,0,W,H);
+    const ns=ND.map(n=>({x:n.lx*W,y:n.ly*H,lb:n.lb}));
+    ctx.setLineDash([3,7]); ctx.strokeStyle='rgba(26,22,20,.13)'; ctx.lineWidth=.55;
+    for(const [a,b] of ED){ctx.beginPath();ctx.moveTo(ns[a].x,ns[a].y);ctx.lineTo(ns[b].x,ns[b].y);ctx.stroke();}
+    ctx.setLineDash([]);
+    const pulse=(Math.sin(t*.02)+1)/2;
+    for(const [a,b] of ED){
+      const px=ns[a].x+(ns[b].x-ns[a].x)*pulse, py=ns[a].y+(ns[b].y-ns[a].y)*pulse;
+      ctx.beginPath(); ctx.arc(px,py,1.3,0,PI2); ctx.fillStyle='rgba(26,22,20,.32)'; ctx.fill();
+    }
+    for(let i=0;i<ns.length;i++){
+      const n=ns[i], p=Math.sin(t*.025+i)*1.4;
+      ctx.beginPath(); ctx.arc(n.x,n.y,11+p,0,PI2); ctx.strokeStyle='rgba(26,22,20,.06)'; ctx.lineWidth=.6; ctx.stroke();
+      ctx.beginPath(); ctx.arc(n.x,n.y,4.5,0,PI2); ctx.strokeStyle='rgba(26,22,20,.18)'; ctx.lineWidth=.6; ctx.stroke();
+      ctx.beginPath(); ctx.arc(n.x,n.y,1.8,0,PI2); ctx.fillStyle=i===0?'rgba(26,22,20,.62)':'rgba(26,22,20,.3)'; ctx.fill();
+      ctx.font=`300 ${Math.max(7,W*.015)}px "DM Mono"`; ctx.fillStyle='rgba(26,22,20,.3)'; ctx.textAlign='center';
+      ctx.fillText(n.lb, n.x, n.y+W*.036);
+    }
+    t++; requestAnimationFrame(draw);
+  }
+  const ro=new ResizeObserver(()=>resize()); ro.observe(canvas); resize(); draw();
+})();
+
+/* COORD HOVER */
+document.querySelectorAll('.coord[data-city]').forEach(el => {
+  el.addEventListener('mouseenter', () => el.classList.add('hovered'));
+  el.addEventListener('mouseleave', () => el.classList.remove('hovered'));
+});
+
+/* SCROLL REVEAL */
+const io=new IntersectionObserver(e=>{e.forEach(x=>{if(x.isIntersecting)x.target.classList.add('vis');});},{threshold:.1});
+document.querySelectorAll('.rv').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>
