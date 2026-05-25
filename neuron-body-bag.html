@@ -71,6 +71,8 @@ nav{
   position:sticky;
   top:2.6rem;
   height:calc(100vh - 2.6rem);
+  overflow-y:auto;
+  overscroll-behavior:contain;
   background:rgba(245,245,244,.94);
   border-right:1px solid var(--ink-faint);
   padding:5rem 3rem 4.5rem;
@@ -78,6 +80,9 @@ nav{
   flex-direction:column;
   justify-content:space-between;
 }
+.product-info::-webkit-scrollbar{width:4px;}
+.product-info::-webkit-scrollbar-track{background:transparent;}
+.product-info::-webkit-scrollbar-thumb{background:rgba(26,22,20,.18);}
 .crumb{
   font-size:.42rem;
   letter-spacing:.28em;
@@ -240,6 +245,7 @@ h1{
     position:relative;
     top:auto;
     height:auto;
+    overflow:visible;
     min-height:auto;
     padding:5rem 1.25rem 2.5rem;
     border-right:0;
