@@ -106,6 +106,13 @@ nav{
 .ticker span{font-family:'DM Mono',monospace;font-size:.5rem;letter-spacing:.25em;color:var(--ink);padding:0 2.5rem;}
 .ticker span.a{color:var(--ink);}
 @keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.return-btn{
+  position:fixed;top:3.25rem;left:1rem;z-index:250;height:2rem;padding:0 .8rem;
+  border:1px solid var(--ink-faint);background:rgba(235,235,235,.78);color:rgba(26,22,20,.68);
+  font-family:'DM Mono',monospace;font-size:.42rem;font-weight:700;letter-spacing:.24em;cursor:none;
+  backdrop-filter:blur(10px);transition:background .25s,color .25s,border-color .25s;
+}
+.return-btn:hover{background:var(--ink);border-color:var(--ink);color:var(--bg);}
 
 /* HERO */
 #hero{
@@ -227,6 +234,14 @@ footer{max-width:1100px;margin:0 auto;padding:3.5rem 3rem 5rem;display:flex;just
     letter-spacing:.06em;
   }
 
+  .return-btn{
+    top:3rem;
+    left:.75rem;
+    height:1.85rem;
+    font-size:.36rem;
+    letter-spacing:.18em;
+  }
+
   #hero{
     height:100svh;
     padding-top:2.4rem;
@@ -285,6 +300,7 @@ footer{max-width:1100px;margin:0 auto;padding:3.5rem 3rem 5rem;display:flex;just
   <div class="nav-cell"><a href="#">ACCOUNT</a></div>
   <div class="nav-cell"><a href="#">CART</a></div>
 </nav>
+<button class="return-btn" type="button" onclick="if(history.length>1){history.back()}else{location.href='index.html'}">RETURN</button>
 
 <!-- TICKER -->
 <div class="ticker-wrap"><div class="ticker">
